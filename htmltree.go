@@ -1,5 +1,5 @@
 // Atempting to re-create my Python htmltree in go.
-package htmltree
+package goht
 
 import (
 	"bytes"

@@ -1,4 +1,4 @@
-package htmltree
+package goht
 
 import (
 	"errors"
