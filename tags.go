@@ -14,21 +14,18 @@ package goht
 //
 //     Empty refers to elements that enclose no content and need no closing tag.
 //
-//     <style> is the only exception. It's signature is Style(**content). More
-//     details and explanation in the doc string.
-//
 // Obsolete and Deprecated Elements:
 // No pull requests will be accepted for
 // acronym, applet, basefont, big, blink, center, command, content,
 // dir, element, font, frame, frameset, isindex, keygen, listing,
 // marquee, multicol, nextid, noembed, plaintext, shadow, spacer,
 // strike, tt, xmp .
+// But you can define these or any other tag quite simply by following the
+// pattern used for the tags defined in this file.
 
 // Main Root
-
 func Html(a string, c ...interface{}) *HtmlTree {
 	return &HtmlTree{"html", a, c, false}
-
 }
 
 // Document Metadata

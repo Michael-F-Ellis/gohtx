@@ -14,10 +14,14 @@ func TestRender(t *testing.T) {
 		{Html(""), "<html></html>"},
 		{P(`class=myclass`), "<p class=myclass></p>"},
 		{P(`data-foo="foo text"`), `<p data-foo="foo text"></p>`},
+		{Br(``), `<br>`},
 	}
 	for _, test := range table {
 		var b bytes.Buffer
-		Render(test.e, &b, -1)
+		err := Render(test.e, &b, -1)
+		if err != nil {
+			t.Errorf("Render failed: %v", err)
+		}
 		r := b.String()
 		if r != test.exp {
 			t.Errorf("Expected %s, got %s", test.exp, r)
@@ -33,6 +37,6 @@ func BenchmarkRender(b *testing.B) {
 
 	for i := 0; i < b.N; i++ {
 		var b bytes.Buffer
-		Render(html, &b, -1)
+		_ = Render(html, &b, -1)
 	}
 }
