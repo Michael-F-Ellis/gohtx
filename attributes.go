@@ -53,14 +53,14 @@ func stringInSlice(s string, ss []string) bool {
 // splitOnFirstEqualSign returns the portion of a string preceding the first
 // equal sign or the entire string if no equal sign is found. This function is
 // not currently used in this package.
-func splitOnFirstEqualSign(av string) (a string, v string) {
-	sp := strings.SplitN(av, "=", 2)
-	a = sp[0]
-	if len(sp) == 2 {
-		v = sp[1]
-	}
-	return
-}
+//func splitOnFirstEqualSign(av string) (a string, v string) {
+//	sp := strings.SplitN(av, "=", 2)
+//	a = sp[0]
+//	if len(sp) == 2 {
+//		v = sp[1]
+//	}
+//	return
+//}
 
 // checkTagAttributes builds an html string containing tag with attrs and
 // parses it, calling checkAttr on each attribute found. It returns a slice of
@@ -95,9 +95,9 @@ func checkTagAttributes(tag, attrs string) (errs []error, err error) {
 // tag, the string of attributes and a slice of errors returned by
 // checkTagAttributes.
 type AttributeErrors struct {
-	tag   string  // an html tag
-	attrs string  // a string of zero or more attributes
-	errs  []error // errors found in attr
+	Tag   string  // an html tag
+	Attrs string  // a string of zero or more attributes
+	Errs  []error // errors found in attrs
 }
 
 // CheckAttributes walks through an ElementTree and checks each tag to verify that
