@@ -28,6 +28,14 @@ func Html(a string, c ...interface{}) *HtmlTree {
 	return &HtmlTree{"html", a, c, false}
 }
 
+// Null tag is a special case and does not correspond to any valid HTML tag.
+// When rendered it returns its content with no enclosing tag, e.g.
+// Null(Br(``),Br(``)) --> <br><br> . It is defined in goht to support injecting
+// a list of elements into an existing tag as JavaScript innerHTML content.
+func Null(c ...interface{}) *HtmlTree {
+	return &HtmlTree{"null", ``, c, false}
+}
+
 // Document Metadata
 // TODO: base
 

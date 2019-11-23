@@ -15,6 +15,8 @@ func TestRender(t *testing.T) {
 		{P(`class=myclass`), "<p class=myclass></p>"},
 		{P(`data-foo="foo text"`), `<p data-foo="foo text"></p>`},
 		{Br(``), `<br>`},
+		{Null(``), ``},
+		{Null(Br(``), Br(``)), `<br><br>`},
 	}
 	for _, test := range table {
 		var b bytes.Buffer

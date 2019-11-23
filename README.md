@@ -81,6 +81,22 @@ Br(a string) *HtmlTree { ... }
 ```
 See `tags.go` for the complete list of tags defined in `goht`.
 
+### The Null Tag (added in V1.1.0)
+`Null` is a pseudo tag doesn't correspond to a valid HTML tag. It's useful when you want to render content that can be injected as the innerHTML of an existing element.  The signature is
+```
+Null(c ...interface{})
+```
+Note that `Null`, unlike other tags, doesn't accept an attribute string. When rendered it emits the rendered content
+without an enclosing tag.
+
+```
+Null(Br(``), Br(``)) // renders <br><br>
+```
+vs
+```
+Div(``, Br(``), Br(``))  // renders <div><br><br></div>
+```
+
 ### The HtmlTree struct
 
 `Goht` represents nested html elements with a recursive struct:

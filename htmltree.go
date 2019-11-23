@@ -20,18 +20,20 @@ type HtmlTree struct {
 // relative to its parent. Render returns an error when it encounters invalid
 // content.
 func Render(h *HtmlTree, b *bytes.Buffer, nindent int) (err error) {
-	// render the opening tag
+	// render the opening tag unless it's the Null tag
 	indent := indentation(nindent)
-	b.WriteString(indent)
-	b.WriteString("<")
-	b.WriteString(h.T)
-	// render the attributes
-	if len(h.A) > 0 {
-		b.WriteString(" ")
+	if h.T != "null" {
+		b.WriteString(indent)
+		b.WriteString("<")
+		b.WriteString(h.T)
+		// render the attributes
+		if len(h.A) > 0 {
+			b.WriteString(" ")
+		}
+		b.WriteString(h.A)
+		// close the opening tag
+		b.WriteString(">")
 	}
-	b.WriteString(h.A)
-	// close the opening tag
-	b.WriteString(">")
 
 	// indentation for nested content.
 	rindent := nindent
@@ -59,7 +61,10 @@ func Render(h *HtmlTree, b *bytes.Buffer, nindent int) (err error) {
 			return fmt.Errorf("Bad content %v. Can't render type %T! ", h.C, c)
 		}
 	}
-	// render the closing tag
+	// render the closing tag unless it's the Null tag
+	if h.T == "null" {
+		return // nothing more to write
+	}
 	b.WriteString(indent)
 	b.WriteString("</")
 	b.WriteString(h.T)
