@@ -159,6 +159,7 @@ func init() {
 		"decoding":        []string{"img"},
 		"default":         []string{"track"},
 		"defer":           []string{"script"},
+		"dialog":          []string{"*"},
 		"dir":             []string{"*"},
 		"dirname":         []string{"input", "textarea"},
 		"disabled":        []string{"button", "command", "fieldset", "input", "keygen", "optgroup", "option", "select", "textarea"},

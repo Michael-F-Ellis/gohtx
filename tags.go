@@ -409,6 +409,13 @@ func Textarea(a string, c ...interface{}) *HtmlTree {
 
 }
 
+// As of 2021, <dialog> is supported by Chrome, Edge & Opera but
+// not by FireFox and Safari.
+
+func Dialog(a string, c ...interface{}) *HtmlTree {
+	return &HtmlTree{"dialog", a, c, false}
+}
+
 // Interactive Elememts (Experimental. Omitted for now.)
 
 // Web Components (Experimental. Omitted for now.)
