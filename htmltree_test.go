@@ -3,6 +3,8 @@ package goht
 import (
 	"bytes"
 	"testing"
+
+	"github.com/go-test/deep"
 )
 
 func TestRender(t *testing.T) {
@@ -40,5 +42,58 @@ func BenchmarkRender(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		var b bytes.Buffer
 		_ = Render(html, &b, -1)
+	}
+}
+func TestIds(t *testing.T) {
+	type testcase struct {
+		tree *HtmlTree
+		exp  []string
+	}
+	// These cases should not return errors
+	tcases := []testcase{
+		// No id
+		{A(`href=something`, "foo"), []string{}},
+		// One element, no content
+		{Dialog(`id=myid`, "This is a useless dialog."), []string{"myid"}},
+		// Quoted id
+		{Dialog(`id="myid"`, "This is a useless dialog."), []string{"myid"}},
+		// nested content
+		{Div(`id=divid`, P(`class=foo id=pid`, "")), []string{"divid", "pid"}},
+	}
+
+	for _, tc := range tcases {
+		ids := []string{}
+		err := Ids(tc.tree, &ids)
+		if err != nil {
+			t.Errorf("%v", err)
+			continue
+		}
+		if diff := deep.Equal(ids, tc.exp); diff != nil {
+			t.Errorf("%v", diff)
+			continue
+		}
+	}
+	type etestcase struct {
+		tree *HtmlTree
+	}
+
+	// These cases should return errors
+	ecases := []etestcase{
+		// more than one id
+		{Div(`id=foo class=x id=bar`, "")},
+		// bad content
+		{Div(`id=foo`, 42)},
+		// empty id
+		{Div(`id= foo`, 42)},
+		// duplicate ids
+		{Div(`id=foo`, P(`id=foo`))},
+	}
+	for _, tc := range ecases {
+		ids := []string{}
+		err := Ids(tc.tree, &ids)
+		if err == nil {
+			t.Errorf("%s", "expected an error, got nil")
+			continue
+		}
 	}
 }

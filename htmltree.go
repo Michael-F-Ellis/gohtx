@@ -4,6 +4,7 @@ package goht
 import (
 	"bytes"
 	"fmt"
+	"strings"
 )
 
 // HtmlTree represents a tree of html content.
@@ -86,4 +87,56 @@ func indentation(n int) string {
 		s += " "
 	}
 	return s
+}
+
+// Ids returns a slice of string containing all the id attributes found in tree.
+// It will return an error if the search finds a malformed id, multiple ids in
+// the same tag or the same id in different tags.
+func Ids(tree *HtmlTree, ids *[]string) (err error) {
+	// split the attributes string on whitespace
+	attrs := strings.Fields(tree.A)
+	// search for strings starting with "id="
+	var n int // number of id strings found
+	var id string
+	for _, a := range attrs {
+		if strings.HasPrefix(strings.ToLower(a), "id=") {
+			id = a[3:]
+			if len(id) == 0 {
+				err = fmt.Errorf(`empty id attribute in '%s'`, tree.A)
+				return
+			}
+			n++
+		}
+	}
+	// if there are more than one, return an error
+	if n > 1 {
+		err = fmt.Errorf("more than one id attribute in '%s' (attributes of %s).", tree.A, tree.T)
+		return
+	}
+	if n == 1 {
+		*ids = append(*ids, strings.Trim(id, `"'`))
+	}
+	// recurse over the tree content
+	for _, c := range tree.C {
+		switch c := c.(type) {
+		case string: // terminal node for this branch
+			continue
+		case *HtmlTree:
+			err = Ids(c, ids)
+		default:
+			err = fmt.Errorf("Bad content %v. Can't render type %T! ", tree.C, c)
+			return
+		}
+	}
+	// Test for duplicates using map insertion
+	var m = make(map[string]int)
+	for i, s := range *ids {
+		_, exist := m[s]
+		if exist {
+			err = fmt.Errorf("duplicated id %s", s)
+			break
+		}
+		m[s] = i
+	}
+	return
 }
