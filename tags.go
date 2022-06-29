@@ -122,6 +122,14 @@ func Section(a string, c ...interface{}) *HtmlTree {
 
 }
 
+func Details(a string, c ...interface{}) *HtmlTree {
+	return &HtmlTree{"details", a, c, false}
+}
+
+func Summary(a string, c ...interface{}) *HtmlTree {
+	return &HtmlTree{"summary", a, c, false}
+}
+
 // Text interface{}
 
 func Blockquote(a string, c ...interface{}) *HtmlTree {
