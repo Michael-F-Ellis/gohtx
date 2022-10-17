@@ -1,7 +1,10 @@
-# goht
-### A minimalist package for creating web content in Go.
+# gohtx
+### A small framework for creating and serving web content in Go.
 
 ## Features
+* htmx
+* bulma
+* sqlite3 (pure Go)
 * Easy to learn if you already know html.
 * Dynamic. Generate html/css/js at build time or run time, server side or client side (using GopherJS or WebAssembly).
 * Over 80 common tags pre-defined. Adding new ones is trivially simple. 
