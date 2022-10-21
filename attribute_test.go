@@ -1,4 +1,4 @@
-package goht
+package gohtx
 
 import (
 	"errors"

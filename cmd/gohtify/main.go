@@ -6,7 +6,7 @@ import (
 	"io"
 	"os"
 
-	"github.com/Michael-F-Ellis/goht"
+	"github.com/Michael-F-Ellis/gohtx"
 )
 
 func main() {
@@ -19,7 +19,7 @@ func main() {
 		os.Exit(1)
 	}
 	var gohtText string
-	err = goht.Gohtify(string(html), ignoreTags, &gohtText)
+	err = gohtx.Gohtify(string(html), ignoreTags, &gohtText)
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
