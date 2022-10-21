@@ -1,4 +1,4 @@
-module github.com/Michael-F-Ellis/goht
+module github.com/Michael-F-Ellis/gohtx
 
 go 1.16
 
