@@ -2,8 +2,9 @@ package gohtx
 
 import (
 	"errors"
-	"reflect"
 	"testing"
+
+	"github.com/go-test/deep"
 )
 
 func TestStringInSlice(t *testing.T) {
@@ -32,11 +33,15 @@ func TestCheckAttr(t *testing.T) {
 	}
 	table := []items{
 		{"href", "a", nil},
+		{"hx-post", "button", nil},
+		{"hx-morble", "button", errors.New("hx-morble is not a valid html5 attribute")},
 		{"HREF", "a", errors.New("HREF is not a valid html5 attribute")},
 		{"href", "body", errors.New("href is not a valid attribute for body")},
 		{"junk", "body", errors.New("junk is not a valid html5 attribute")},
 		{"data-foobar", "body", nil},
 		{"data-x", "body", nil},
+		{"data-hx-post", "button", nil},
+		{"data-hx-morble", "button", errors.New("data-hx-morble doesn't match any valid htmx attribute")},
 		{"data-fooBar", "body", errors.New("data-fooBar: uppercase is not allowed in data-* attributes")},
 		{"data-", "body", errors.New("data- is not a valid html5 attribute")},
 	}
@@ -73,18 +78,15 @@ func TestCheckTagAttributes(t *testing.T) {
 		exp []error // expected result
 	}
 	table := []items{
-		{"a", `href="https://example.com/foo" id="foolink"`, []error{}},
+		{"a", `href="https://example.com/foo" id="foolink"`, nil},
 		{"body", `href="https://example.com/foo" id="foolink"`, []error{errors.New("href is not a valid attribute for body")}},
 	}
 	for _, test := range table {
 		errs, err := checkTagAttributes(test.tag, test.a)
 		switch err {
 		case nil:
-			switch {
-			case len(test.exp) == 0 && len(errs) == 0: // reflect.DeepEqual doesn't handle this correctly
-				continue
-			case !reflect.DeepEqual(test.exp, errs):
-				t.Errorf("Expected %v got %v.", test.exp, errs)
+			if diff := deep.Equal(test.exp, errs); diff != nil {
+				t.Errorf("%v", diff)
 			}
 		default:
 			t.Errorf("html.Parse error: %v", err)
@@ -105,8 +107,8 @@ func TestCheckAttributes(t *testing.T) {
 	for _, test := range table {
 		perrs := &[]AttributeErrors{}
 		test.e.CheckAttributes(perrs)
-		if !reflect.DeepEqual(test.exp, *perrs) {
-			t.Errorf("Expected %v got %v.", test.exp, *perrs)
+		if diff := deep.Equal(test.exp, *perrs); diff != nil {
+			t.Errorf("%v", diff)
 		}
 	}
 }

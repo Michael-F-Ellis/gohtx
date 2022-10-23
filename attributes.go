@@ -22,10 +22,16 @@ func checkAttr(tag string, a string) error {
 			return fmt.Errorf("%s is not a valid html5 attribute", a)
 		case name != strings.ToLower(name):
 			return fmt.Errorf("%s: uppercase is not allowed in data-* attributes", a)
+		case strings.HasPrefix(name, "hx") && !isValidHxAttribute(name):
+			return fmt.Errorf("%s doesn't match any valid htmx attribute", a)
 		default:
 			return nil
 		}
 	}
+	if isValidHxAttribute(a) {
+		return nil
+	}
+
 	// Other attributes are validated via the Attributes map.
 	tags, found := Attributes[a]
 	switch {
@@ -38,6 +44,9 @@ func checkAttr(tag string, a string) error {
 
 	}
 	return nil
+}
+func isValidHxAttribute(a string) bool {
+	return stringInSlice(a, HxAttrs)
 }
 
 // stringInSlice returns true if string s is an element in slice ss.

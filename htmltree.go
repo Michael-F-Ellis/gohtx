@@ -23,6 +23,7 @@ type HtmlTree struct {
 func Render(h *HtmlTree, b *bytes.Buffer, nindent int) (err error) {
 	// render the opening tag unless it's the Null tag
 	indent := indentation(nindent)
+	var errs []error
 	if h.T != "null" {
 		b.WriteString(indent)
 		b.WriteString("<")
@@ -30,6 +31,13 @@ func Render(h *HtmlTree, b *bytes.Buffer, nindent int) (err error) {
 		// render the attributes
 		if len(h.A) > 0 {
 			b.WriteString(" ")
+			errs, err = checkTagAttributes(h.T, h.A)
+			if err != nil {
+				return
+			}
+			if len(errs) > 0 {
+				err = fmt.Errorf("one or more errors in attributes for tag %s: %v", h.T, errs)
+			}
 		}
 		b.WriteString(h.A)
 		// close the opening tag
