@@ -2,19 +2,35 @@
 ### A small framework for creating and serving web content in Go.
 
 ## Features
-* htmx
-* bulma
-* sqlite3 (pure Go)
 * Easy to learn if you already know html.
 * Dynamic. Generate html/css/js at build time or run time, server side or client side (using GopherJS or WebAssembly).
 * Over 80 common tags pre-defined. Adding new ones is trivially simple. 
 * Composable. Reduce repetition by writing functions that return nested html fragments.
 * Fast. About 100ns per tag on typical hardware.
+* Supports using Go's embed.FS package to compile an entire website into a single binary executable.
+* Includes support for HTMX hypertext and Bulma CSS
 
-## Usage
-```import . "github.com/Michael-F-Ellis/goht"```
+## HTMX and Bulma
+Gohtx is a fork of my [goht](https://github.com/Michael-F-Ellis/goht) package.  It embeds [htmx](https://htmx.org) and [bulma css](https://bulma.io) to enable easy creation of responsive, attractive web applications almost entirely in Go. A single function call creates the necessary \<head> content to freely
+use the added attributes and classes. The use of `htmx` and `bulma` are entirely optional, of course.
 
-Dot imports are generally discouraged as bad style but they make sense for this package. It saves you having to put `goht.` in front of every tag function. 
+## The Skeleton
+Gohtx includes a complete skeleton app you can copy from the `cmd/skeleton` subdirectory as a starting point. For a quick and easy start, clone a local copy of this repo, `cd` to `cmd/skeleton` and run
+
+```shell
+go build
+./skeleton
+```
+Then open a browser tab to `localhost:8080`
+
+The skeleton uses `htmx` and `bulma`. Study the `webpages.go` file to see how they are used with `gohtx`. Both `htmx` and `bulma` are thoroughly documented on their respective web sites. You should consult those to understand their attributes and classes.
+## Creating HTML with gohtx
+
+I recommend keeping your HTML generation in a separate file and importing `gohtx` as follows:
+
+```import . "github.com/Michael-F-Ellis/gohtx"```
+
+Dot imports are generally discouraged as bad style but they make sense for this package. It saves you having to put `gohtx.` in front of every tag function. 
 
 ### Hello, World
 ```
@@ -35,8 +51,6 @@ produces
 ```
 
 See [Example 1](https://goplay.space/#eP-DfcNaJxh) for a complete listing you can edit and run. 
-
-For a larger usage example, see `webpage.go` in the [repository](https://github.com/Michael-F-Ellis/infinite-etudes) for my online ear-training app [Infinite Etudes](https://etudes.ellisandgrant.com).
 
 ### Composing
 Our "Hello, World" example
@@ -74,18 +88,18 @@ func Tagname(a string, c ...interface{}) *HtmlTree {
 
 The func name is simply the html tag name with an initial cap.
 
-The first arg, `a`, is a string of attributes written exactly as you would in html, e.g. `id=42 class="foo"`. In `goht` it's helpful to enclose the attribute string in back-quotes to allow use of both single and double quotes when specifying attributes.
+The first arg, `a`, is a string of attributes written exactly as you would in html, e.g. `id=42 class="foo"`. In `gohtx` it's helpful to enclose the attribute string in back-quotes to allow use of both single and double quotes when specifying attributes.
 
 The second arg, `c`, is the content of the tag.  It's a variadic argument meaning that you may supply as many arguments as needed to define the inner html of the tag.  The type of `c` is `interface{}`. Only two concrete types are supported: `string` or `*HtmlTree`. The latter is the return value type of every tag function.
   
-Empty tags, like `<br>` can't contain other elements. In `goht` these tag have only the `a` argument, e.g 
+Empty tags, like `<br>` can't contain other elements. In `gohtx` these tag have only the `a` argument, e.g 
 ```
 Br(a string) *HtmlTree { ... }
 ```
-See `tags.go` for the complete list of tags defined in `goht`.
+See `tags.go` for the complete list of tags defined in `gohtx`.
 
-### The Null Tag (added in V1.1.0)
-`Null` is a pseudo tag doesn't correspond to a valid HTML tag. It's useful when you want to render content that can be injected as the innerHTML of an existing element.  The signature is
+### The Null Tag
+`Null` is a pseudo tag that doesn't correspond to a valid HTML tag. It's useful when you want to render content that can be injected as the innerHTML of an existing element.  The signature is
 ```
 Null(c ...interface{})
 ```
@@ -102,7 +116,7 @@ Div(``, Br(``), Br(``))  // renders <div><br><br></div>
 
 ### The HtmlTree struct
 
-`Goht` represents nested html elements with a recursive struct:
+`Gohtx` represents nested html elements with a recursive struct:
 
 ```
 // HtmlTree represents a tree of html content.
@@ -166,7 +180,7 @@ Script("",
 	`)
 ```
 ## Checking attributes
-Goht includes a limited facility for checking tag attributes. It's mainly useful for unit tests.
+Gohtx includes a limited facility for checking tag attributes. It's mainly useful for unit tests.
 ```
 func (e *HtmlTree) CheckAttributes(perrs *[]AttributeErrors)
 ```
@@ -183,9 +197,12 @@ type AttributeErrors struct {
 
 See [Example 3](https://goplay.space/#UYp7qPBfXq7) for usage details
 
+Gohtx now includes attribute checking in the Render function to help you catch misspelled or misused attributes, so be sure to check and log the errors returned by Render()
 ## Alternatives
-Goht is designed with a "simplest thing that could possibly work" philosophy. Here are some more ambitious alternatives.
+Gohtx is designed with a "simplest thing that could possibly work" philosophy. Here are some more ambitious alternatives.
 
 * [vugu](https://www.vugu.org/)
 * [vecty](https://github.com/gopherjs/vecty)
-* [html/template](https://golang.org/pkg/html/template/)
+* [html/template](https://golang.org/pkg/html/template/) 
+  
+  Note: Gohtx is compatible with Go templates in the sense that you can use both within the same app to generate content.  For boilerplate content that needs simple substitutions at run time, templates are fast and convenient. 
