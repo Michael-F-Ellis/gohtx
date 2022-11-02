@@ -1,4 +1,6 @@
-// The gohtx app skeleton
+// The gohtx app skeleton demonstrates the essentials of using gohtx, htmx,
+// hyperscript and bulma to build a single binary containing a server and
+// embedded content to generate and serve a responsive application.
 package main
 
 import (

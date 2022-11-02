@@ -29,16 +29,33 @@ func indexBody(key string) (body *HtmlTree) {
 	sectionAttrs := fmt.Sprintf(`class=section hx-vals='{"key": "%s"}'`, key)
 	body = Body(``,
 		Section(sectionAttrs,
-			H1(`class=title`, "Gohtx App Skeleton"),
-			P(`class="subtitle is-info"`,
-				`with <b>HTMX</b> hypertext and <b>Bulma</b> CSS`,
-			),
-			Div(`id=target class="container"`,
+			H1(`class="title has-text-centered"`, "Gohtx App Skeleton"),
+			P(`class="subtitle is-info has-text-centered"`,
+				`with <b>HTMX</b>, <b>HyperScript</b> and <b>Bulma</b> CSS`),
+
+			Div(`id="target" class="block"`,
 				Div(`class="block"`, "I've never been updated!"),
 				updaterButton(),
 			),
+
+			Div(`class="block"`,
+				P(``, `Learn more about HTMX, HyperScript, and Bulma at their websites:`),
+				Ul(``,
+					Li(``, A(`href="https://htmx.org"`, "htmx.org")),
+					Li(``, A(`href="https://hyperscript.org"`, "hyperscript.org")),
+					Li(``, A(`href="https://bulma.io"`, "bulma.io")),
+				),
+			),
+			Div(`class="block"`,
+				P(``, `Learn more about Gohtx at:`),
+				Ul(``,
+					Li(``, A(`href="https://pkg.go.dev/github.com/Michael-F-Ellis/gohtx"`, "pkg.go.dev")),
+					Li(``, A(`href="https://github.com/Michael-F-Ellis/gohtx"`, "github.com")),
+				),
+			),
 		),
 	)
+
 	return
 }
 
