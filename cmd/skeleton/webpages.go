@@ -15,7 +15,7 @@ func indexPage(key string) (page *HtmlTree) {
 		"<!DOCTYPE html>",
 		Html(``,
 			Head(``,
-				DefaultHeadContent(),
+				CustomHeadContent(true, true, true),
 				Title(``, `Skeleton App`),
 			),
 			indexBody(key),
@@ -43,10 +43,14 @@ func indexBody(key string) (body *HtmlTree) {
 }
 
 // updaterButton returns a div containing a button with the htmx attributes
-// needed to replace the content of the button's container.
+// needed to replace the content of the button's container. The button also
+// has HyperScript that toggles the text color of the page title on each click.
 func updaterButton() (div *HtmlTree) {
 	div = Div(`class="block"`,
-		Button(`class="button is-primary is-medium" hx-get="/update" hx-target="#target"`, "Click Me!"),
+		Button(`class="button is-primary is-medium" 
+		hx-get="/update" hx-target="#target"
+		script="on click toggle .has-text-primary on .title"
+		`, "Click Me!"),
 	)
 	return
 }

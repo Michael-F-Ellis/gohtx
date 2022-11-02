@@ -38,4 +38,6 @@ var HxAttrs []string = []string{
 	"hx-sync",        // control how requests made be different elements are synchronized
 	"hx-vars",        // adds values dynamically to the parameters to submit with the request (deprecated, please use hx-vals)
 	"hx-ws",          // has been moved to an extension. Documentation for older versions
+	"_",              // (HyperScript) the convenient if slightly cryptic alternative to "script"
+	"script",         // (HyperScript) canonical name for a script attribute
 }
