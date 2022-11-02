@@ -1,4 +1,5 @@
-// Atempting to re-create my Python htmltree in go.
+// Gohtx is an extended version of github.com/Michael-F-Ellis/goht. It embeds
+// HTMX, HyperScript and Bulma CSS in the package binary.
 package gohtx
 
 import (
