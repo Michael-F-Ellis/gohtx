@@ -6,3 +6,5 @@
 
 cmd/gohtify/gohtify
 cmd/skeleton/skeleton
+cmd/playground/playground
+cmd/playground/temp/*
