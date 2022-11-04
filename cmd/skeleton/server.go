@@ -6,7 +6,6 @@ import (
 	"log"
 	"math/rand"
 	"net/http"
-	"path"
 	"strings"
 
 	"github.com/Michael-F-Ellis/gohtx"
@@ -31,7 +30,8 @@ func Serve() {
 	// The index page handler
 	http.Handle("/", http.HandlerFunc(indexHndlr))
 	// Embedded assets handler
-	http.Handle("/gohtx/", http.HandlerFunc(gohtxAssetHndlr))
+	// http.Handle("/gohtx/", http.HandlerFunc(gohtxAssetHndlr))
+	gohtx.AddGohtxAssetHandler()
 	// The update handler
 	http.Handle("/update", http.HandlerFunc(updateHndlr))
 
@@ -76,35 +76,6 @@ func indexHndlr(w http.ResponseWriter, r *http.Request) {
 			log.Println(err)
 		}
 	}
-}
-
-// gohtxAssetHndlr responds with the requested asset or a 500 error if the asset
-// cannot be found.
-func gohtxAssetHndlr(w http.ResponseWriter, r *http.Request) {
-	asset := strings.TrimPrefix(r.URL.Path, "/gohtx/")
-	log.Printf("%s requested", asset)
-	fs := gohtx.GohtxFS()
-	buf, err := fs.ReadFile(asset)
-	if err != nil {
-		log.Printf("%v", err)
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-	// Write the Content-Type to the header
-	ext := path.Ext(asset)
-	switch ext {
-	case ".css":
-		w.Header().Set("Content-Type", "text/css")
-	case ".js":
-		w.Header().Set("Content-Type", "text/javascript")
-	default:
-		w.Header().Set("Content-Type", http.DetectContentType(buf))
-	}
-	_, err = w.Write(buf)
-	if err != nil {
-		log.Println(err)
-	}
-
 }
 
 // updateHndlr responds to an update request. It verifies that

@@ -2,7 +2,13 @@ package gohtx
 
 import (
 	"embed"
+	"log"
+	"net/http"
+	"path"
+	"strings"
 )
+
+const GohtxAssetPath = "/gohtx/" // default route to embedded assets.
 
 //go:embed htmx.min.js hyperscript.js bulma/*
 var staticFiles embed.FS
@@ -45,4 +51,38 @@ func CustomHeadContent(htmx, hyperscript, bulma bool) (h *HtmlTree) {
 
 	h = Null(options...)
 	return
+}
+
+// AddGohtxAssetHandler is a convenience function that adds an http.Handler to
+// process requests for assets in the embedded FS. Use this to avoid having to
+// know about the path string.
+func AddGohtxAssetHandler() {
+	http.Handle(GohtxAssetPath, http.HandlerFunc(assetHandler))
+}
+
+// assetHandler is the unexported handler installed by GohtxAssetHandler
+func assetHandler(w http.ResponseWriter, r *http.Request) {
+	asset := strings.TrimPrefix(r.URL.Path, GohtxAssetPath)
+	log.Printf("%s requested", asset)
+	fs := GohtxFS()
+	buf, err := fs.ReadFile(asset)
+	if err != nil {
+		log.Printf("%v", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	// Write the Content-Type to the header
+	ext := path.Ext(asset)
+	switch ext {
+	case ".css":
+		w.Header().Set("Content-Type", "text/css")
+	case ".js":
+		w.Header().Set("Content-Type", "text/javascript")
+	default:
+		w.Header().Set("Content-Type", http.DetectContentType(buf))
+	}
+	_, err = w.Write(buf)
+	if err != nil {
+		log.Println(err)
+	}
 }
