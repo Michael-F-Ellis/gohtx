@@ -16,7 +16,7 @@ func indexPage(key string) (page *HtmlTree) {
 		Html(``,
 			Head(``,
 				CustomHeadContent(true, true, true),
-				Title(``, `Skeleton App`),
+				Title(``, `Gohtx Playground`),
 			),
 			indexBody(key),
 		),
@@ -24,27 +24,53 @@ func indexPage(key string) (page *HtmlTree) {
 	return
 }
 
+// labeledFormField wraps a label and control into a bulma form field.
+func labeledFormField(label string, control *HtmlTree) (field *HtmlTree) {
+	field = Div(`class="field"`,
+		Label(`class="label"`, label),
+		Div(`class="control"`, control))
+	return
+}
+
+// unlabeledFormField wraps a control into a bulma form field.
+func unlabeledFormField(control *HtmlTree) (field *HtmlTree) {
+	field = Div(`class="field"`,
+		Div(`class="control"`, control))
+	return
+}
+
 // indexBody returns the body element of the index.html page
 func indexBody(key string) (body *HtmlTree) {
+	defaultExample, err := fragments.ReadFile("fragments/notification.txt")
+	if err != nil {
+		// It's a programming error if notifications.txt isn't available.
+		panic(err)
+	}
 	sectionAttrs := fmt.Sprintf(`class=section hx-vals='{"key": "%s"}'`, key)
+
 	body = Body(``,
 		Section(sectionAttrs,
+			// Title and subtitle
 			H1(`class="title has-text-centered"`, "Gohtx Playground"),
 			P(`class="subtitle is-info has-text-centered"`,
 				`with <b>HTMX</b>, <b>HyperScript</b> and <b>Bulma</b> CSS`),
 
 			Div(`class="block"`,
+				// A form with textarea for code and a button to submit it.
 				Div(`id="pgsource" class="block"`,
 					Form(`class="form" hx-post="/input" hx-target="#pgtarget"`,
-						Input(`type="textarea" name="code"`),
-						Button(`class="button" type="submit"`, "Evaluate"),
-					),
+						labeledFormField("Code", Textarea(`class=textarea name=code`, string(defaultExample))),
+						unlabeledFormField(Button(`class="button is-primary" type="submit"`, "Evaluate"))),
 				),
-				Div(`id="pgtarget" class="block"`),
 			),
+			// where the server response goes
+			Div(`id="pgtarget" class="block"`),
+		),
 
+		Div(`class="container"`,
 			Div(`class="block"`,
-				P(``, `Learn more about HTMX, HyperScript, and Bulma at their websites:`),
+				Hr(``),
+				P(``, `Learn more about HTMX, HyperScript, and Bulma at:`),
 				Ul(``,
 					Li(``, A(`href="https://htmx.org"`, "htmx.org")),
 					Li(``, A(`href="https://hyperscript.org"`, "hyperscript.org")),
@@ -60,7 +86,6 @@ func indexBody(key string) (body *HtmlTree) {
 			),
 		),
 	)
-
 	return
 }
 

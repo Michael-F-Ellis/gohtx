@@ -4,14 +4,13 @@
 package main
 
 import (
+	"embed"
 	"flag"
-	"fmt"
-	"io/ioutil"
 	"log"
-	"os"
-
-	"github.com/bitfield/script"
 )
+
+//go:embed fragments/*.txt
+var fragments embed.FS // Small examples for the playground
 
 var (
 	// The following are set by flag.Parse from command line arguments.
@@ -28,48 +27,3 @@ func main() {
 	flag.Parse()
 	Serve()
 }
-
-// eval is called to evaluate Go code entered into the playground.
-func eval(input string) (htm string) {
-	code := fmt.Sprintf(template, input)
-	tmpfile, err := ioutil.TempFile("temp", "*.go")
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer os.Remove(tmpfile.Name())
-	if _, err := tmpfile.Write([]byte(code)); err != nil {
-		log.Fatal(err)
-	}
-	htm, err = script.Exec("go run " + tmpfile.Name()).String()
-	if err != nil {
-		log.Fatal(err)
-	}
-	return
-}
-
-var template = `
-package main
-
-import (
-	"bytes"
-	"fmt"
-
-	. "github.com/Michael-F-Ellis/gohtx"
-)
-
-func main() {
-
-	%s
-
-	var buf bytes.Buffer
-	err := Render(htx, &buf, 0)
-	if err != nil {
-		buf.Reset()
-		err = Render(P("", "render failed: "+err.Error()), &buf, 0)
-		// This should never happen ...
-		if err != nil {
-			panic(err)
-		}
-	}
-	fmt.Println(buf.String())
-}`

@@ -1,0 +1,5 @@
+// Notification
+// Uses Bulma to style a notification div and HyperScript to alter and remove the div.
+htx = Div(`class="notification is-info" 
+script="on click put 'Thanks, and goodbye!' into me then wait 1s then remove me"`,
+"Hello! Please click me so I can leave.")

@@ -3,12 +3,15 @@ package main
 import (
 	"bytes"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"math/rand"
 	"net/http"
+	"os"
 	"strings"
 
 	"github.com/Michael-F-Ellis/gohtx"
+	"github.com/bitfield/script"
 )
 
 // Sessions provides some rudimentary session tracking. You'll
@@ -34,8 +37,9 @@ func Serve() {
 	gohtx.AddGohtxAssetHandler()
 	// The update handler
 	http.Handle("/update", http.HandlerFunc(updateHndlr))
-	// The input handler
+	// The input handlers
 	http.Handle("/input", http.HandlerFunc(inputHndlr))
+	http.Handle("/unwrapped", http.HandlerFunc(unwrappedInputHndlr))
 
 	// Live installations for customers serve over HTTPS on port 443
 	// For testing we serve on localhost (default port 8080). The choice of
@@ -123,6 +127,115 @@ func inputHndlr(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	code := r.FormValue("code")
-	htm := eval(code)
+	htm := eval(code, true)
 	_, _ = w.Write([]byte(htm))
+}
+
+// unwrappedInputHndlr gets the user's Go code from the input textarea and tries to evaluate
+// it. It uses the eval function which puts the result of the evaluation into the supplied
+// buffer.
+func unwrappedInputHndlr(w http.ResponseWriter, r *http.Request) {
+	err := r.ParseForm()
+	if err != nil {
+		log.Printf("%v", err)
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	code := r.FormValue("code")
+	htm := eval(code, false) // don't insert the user's code into the template.
+	_, _ = w.Write([]byte(htm))
+}
+
+// eval is called to evaluate Go code entered in the playground.
+func eval(input string, wrap bool) (htm string) {
+	// Insert user input into the template
+	var code string
+	if wrap {
+		code = fmt.Sprintf(template, input)
+	} else {
+		code = input
+	}
+	// Get a temporary file to hold the code.
+	tmpfile, err := ioutil.TempFile("temp", "*.go")
+	if err != nil {
+		htm = fmt.Sprintf("<p>%v</p>", err)
+		return
+	}
+	defer os.Remove(tmpfile.Name())
+
+	// Write the code to the temporary file.
+	if _, err := tmpfile.Write([]byte(code)); err != nil {
+		htm = fmt.Sprintf("<p>%v</p>", err)
+		return
+	}
+	// Run the code
+	cmd := fmt.Sprintf("go run %s", tmpfile.Name())
+	htm, err = script.Exec(cmd).String()
+	if err != nil {
+		// Atempt to format the code but don't worry if formatting fails.
+		p := script.Exec("go fmt " + tmpfile.Name())
+		p.Wait()
+		// Return a listing of the run errors and the code.
+		htm = fmt.Sprintf(`
+		<div class="notification is-warning">
+		  <p>Evaluation failed:</p>
+		  <pre class="notification is-warning">%v</pre>
+		</div>
+		<hr><code><pre>%v</pre></code>`, htm, code)
+	}
+	return
+}
+
+var template = `
+// Wrapper for Gohtx Playground evaluation
+package main
+
+import (
+    "bytes"
+    "fmt"
+
+    . "github.com/Michael-F-Ellis/gohtx"
+)
+
+func main() {
+    var htx *HtmlTree
+	htx = P("",B("", "If you see this message, you forgot to assign a value to 'htx'."))
+
+    /***** You code inserted here. Must assign a *HtmlTree to htx. *****/
+    %s
+    /***** End of your code. *****/
+
+    var buf bytes.Buffer
+    err := Render(htx, &buf, 0)
+    if err != nil {
+    	buf.Reset()
+    	err = Render(P("", "render failed: "+err.Error()), &buf, 0)
+    	if err != nil {
+    	    // This should never happen ...
+    		panic(err)
+    	}
+    }
+    fmt.Println(buf.String())
+}`
+
+// getFragments returns a map of the files in the fragments FS.
+// The file contents are keyed first line of each fragment file.
+func getFragments() (m map[string]string, err error) {
+	m = make(map[string]string)
+	files, err := fragments.ReadDir("fragments")
+	if err != nil {
+		return
+	}
+	for _, f := range files {
+		buf, e := os.ReadFile("fragments/" + f.Name())
+		err = e
+		if err != nil {
+			return
+		}
+		code := strings.TrimSpace(string(buf))
+		lines := strings.Split(code, "\n")
+		name := strings.TrimSpace(strings.ReplaceAll(lines[0], "/", ""))
+		m[name] = code
+	}
+	return
 }
