@@ -13,6 +13,7 @@ func TestRender(t *testing.T) {
 		exp string    // expected result
 	}
 	table := []items{
+		{Comment(`This is a comment`), "<!-- This is a comment-->"},
 		{Html(""), "<html></html>"},
 		{P(`class=myclass`), "<p class=myclass></p>"},
 		{P(`data-foo="foo text"`), `<p data-foo="foo text"></p>`},

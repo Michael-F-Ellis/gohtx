@@ -19,7 +19,7 @@ func main() {
 		os.Exit(1)
 	}
 	var gohtText string
-	err = gohtx.Gohtify(string(html), ignoreTags, &gohtText)
+	err = gohtx.Gohtify(string(html), true, ignoreTags, &gohtText)
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)

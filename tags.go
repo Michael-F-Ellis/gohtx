@@ -23,6 +23,11 @@ package gohtx
 // But you can define these or any other tag quite simply by following the
 // pattern used for the tags defined in this file.
 
+// Comment
+func Comment(a string) *HtmlTree {
+	return &HtmlTree{"!--", a + "--", []interface{}{}, true}
+}
+
 // Main Root
 func Html(a string, c ...interface{}) *HtmlTree {
 	return &HtmlTree{"html", a, c, false}

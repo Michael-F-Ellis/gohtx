@@ -71,35 +71,51 @@ func indexBody(key string) (body *HtmlTree) {
 				optionNames,
 				"/fragment",
 				"which",
-				"#code",
+				"#gocode",
 			),
 			// A form with textarea for code and a button to submit it.
 			Div(`id="pgsource" class="block"`,
-				Form(`class="form" hx-post="/input" hx-target="#pgtarget"`,
-					labeledFormField("Code", Textarea(`id="code" class=textarea name=code`, string(defaultExample))),
-					unlabeledFormField(Button(`class="button is-primary" type="submit"`, "Evaluate"))),
+				Form(`class="form" hx-post="/input" hx-target="#pgtarget" hx-vals='{"lang":"go"}'`,
+					labeledFormField("Go Code", Textarea(`id="gocode" class=textarea name=gocode`, string(defaultExample))),
+					unlabeledFormField(Button(`class="button is-primary" type="submit"`, "Evaluate")),
+					// unlabeledFormField(Button(`class="button is-primary" hx-vals='js:{"lang":"html"}' type="submit"`, "Gohtify")),
+				),
+			),
+			Div(`id="pghtml" class="block"`,
+				Form(`class="form" hx-post="/input" hx-target="#gocode" hx-vals='{"lang":"html"}'`,
+					labeledFormField("HTML", Textarea(`id="htmlcode" class=textarea name=htmlcode`, string(`<p>Enter html here</p>`))),
+					unlabeledFormField(Button(`class="button is-primary" type="submit"`, "Gohtify")),
+				),
 			),
 
 			// where the server response goes
 			Div(`id="pgtarget" class="block"`),
 		),
 
-		Div(`class="container"`,
-			Div(`class="block"`,
-				Hr(``),
-				P(``, `Learn more about HTMX, HyperScript, and Bulma at:`),
-				Ul(``,
-					Li(``, A(`href="https://htmx.org"`, "htmx.org")),
-					Li(``, A(`href="https://hyperscript.org"`, "hyperscript.org")),
-					Li(``, A(`href="https://bulma.io"`, "bulma.io")),
-				),
+		// documentation links
+		resourceLinks(),
+	)
+	return
+}
+
+// resourceLinks returns a div with links to documentation for htmx,
+// hyperscript, bulma and gohtx.
+func resourceLinks() (div *HtmlTree) {
+	div = Div(`class="container"`,
+		Div(`class="block"`,
+			Hr(``),
+			P(``, `Learn more about HTMX, HyperScript, and Bulma at:`),
+			Ul(``,
+				Li(``, A(`href="https://htmx.org"`, "htmx.org")),
+				Li(``, A(`href="https://hyperscript.org"`, "hyperscript.org")),
+				Li(``, A(`href="https://bulma.io"`, "bulma.io")),
 			),
-			Div(`class="block"`,
-				P(``, `Learn more about Gohtx at:`),
-				Ul(``,
-					Li(``, A(`href="https://pkg.go.dev/github.com/Michael-F-Ellis/gohtx"`, "pkg.go.dev")),
-					Li(``, A(`href="https://github.com/Michael-F-Ellis/gohtx"`, "github.com")),
-				),
+		),
+		Div(`class="block"`,
+			P(``, `Learn more about Gohtx at:`),
+			Ul(``,
+				Li(``, A(`href="https://pkg.go.dev/github.com/Michael-F-Ellis/gohtx"`, "pkg.go.dev")),
+				Li(``, A(`href="https://github.com/Michael-F-Ellis/gohtx"`, "github.com")),
 			),
 		),
 	)
@@ -206,9 +222,32 @@ func inputHndlr(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
-	code := r.FormValue("code")
-	htm := eval(code, true)
-	_, _ = w.Write([]byte(htm))
+	lang := r.FormValue("lang")
+	var result string
+	switch lang {
+	case "go":
+		code := r.FormValue("gocode")
+		result = eval(code, true)
+	case "html":
+		code := r.FormValue("htmlcode")
+		// wrap the html code in a div to ensure Gohtify sees a single HtmlTree
+		wrapped := fmt.Sprintf(`<div id="wrapper-added-by-gohtify">%s</div>`, code)
+		ignore := map[string]struct{}{"html": {}, "head": {}, "body": {}}
+		err := Gohtify(wrapped, true, ignore, &result)
+		if err != nil {
+			log.Printf("%v", err)
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+		// include an assignment to 'htx' (because it's annoying to omit it.)
+		result = "htx=" + result
+	default:
+		log.Printf("unknown lang:'%v'", lang)
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	_, _ = w.Write([]byte(result))
 }
 
 // unwrappedInputHndlr gets the user's Go code from the input textarea and tries to evaluate

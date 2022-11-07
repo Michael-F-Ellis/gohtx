@@ -2,6 +2,7 @@ package gohtx
 
 import (
 	"fmt"
+	"go/format"
 	"strings"
 
 	"golang.org/x/net/html"
@@ -13,7 +14,7 @@ import (
 // creates them if they're not present in the string. That's usually not desired
 // since the chief use of Gohtify is to turn useful fragments of html into
 // into equivalent Go code.
-func Gohtify(htext string, ignoreTags map[string]struct{}, gohttext *string) (err error) {
+func Gohtify(htext string, gofmt bool, ignoreTags map[string]struct{}, gohttext *string) (err error) {
 	// parse with net/html package
 	htext = strings.TrimSpace(htext)
 	doc, err := html.ParseFragment(strings.NewReader(htext), nil)
@@ -38,7 +39,7 @@ func Gohtify(htext string, ignoreTags map[string]struct{}, gohttext *string) (er
 			// recurse on the content, if any
 			for c := n.FirstChild; c != nil; c = c.NextSibling {
 				if !ignore {
-					maybeAddComma(c, gohttext)
+					maybeAddComma(c, gohttext, gofmt)
 				}
 				f(c)
 			}
@@ -47,21 +48,32 @@ func Gohtify(htext string, ignoreTags map[string]struct{}, gohttext *string) (er
 				*gohttext += ")"
 			}
 		case html.TextNode:
-			// if the content is a string, append it enclosed in back quotes
-			// unless it consists enttirely of whitespace. In that case, omit
-			// the back quotes.
+			// if the content is a string, strip leading and trailing
+			// whitespace, then append it enclosed in back quotes unless it
+			// consists entirely of whitespace. In that case, omit the back
+			// quotes.
 			switch isWhiteSpace(n.Data) {
 			case true:
-				*gohttext += n.Data
+				*gohttext += ""
 			case false:
-				*gohttext += "`" + n.Data + "`"
+				*gohttext += "`" + strings.TrimSpace(n.Data) + "`"
 			}
+		case html.CommentNode:
+			*gohttext += "Comment(`" + strings.TrimSpace(n.Data) + "`)"
 		}
-
 	}
 	// Walk the tree
 	for _, n := range doc {
 		f(n)
+	}
+	if gofmt {
+		var buf []byte
+		buf, err = format.Source([]byte(*gohttext))
+		if err != nil {
+			err = fmt.Errorf("got error: %v trying to fmt %s", err, *gohttext)
+			return
+		}
+		*gohttext = string(buf)
 	}
 	return
 }
@@ -80,18 +92,25 @@ func isWhiteSpace(s string) bool {
 }
 
 // maybeAddComma appends a comma if the previous child node is not nil and is
-// not a TextNode containing only whitespace.
-func maybeAddComma(n *html.Node, gohtText *string) {
+// not a TextNode containing only whitespace. When fmt is true, a newline is
+// appended following the comma.
+func maybeAddComma(n *html.Node, gohtText *string, fmt bool) {
+	var comma string
+	if fmt {
+		comma = ",\n"
+	} else {
+		comma = ","
+	}
 	if n.PrevSibling == nil {
-		*gohtText += ","
+		*gohtText += comma
 		return
 	}
 	switch n.PrevSibling.Type {
 	case html.TextNode:
 		if !isWhiteSpace(n.PrevSibling.Data) {
-			*gohtText += ","
+			*gohtText += comma
 		}
 	default:
-		*gohtText += ","
+		*gohtText += comma
 	}
 }
