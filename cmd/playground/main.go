@@ -7,6 +7,8 @@ import (
 	"embed"
 	"flag"
 	"log"
+	"os"
+	"strings"
 )
 
 //go:embed fragments/*.txt
@@ -35,4 +37,26 @@ func main() {
 	flag.StringVar(&CertKeyPath, "k", "", `path to a valid certificate key file`)
 	flag.Parse()
 	Serve()
+}
+
+// getFragments returns a map of the files in the fragments FS.
+// The file contents are keyed first line of each fragment file.
+func getFragments() (m map[string]string, err error) {
+	m = make(map[string]string)
+	files, err := fragments.ReadDir("fragments")
+	if err != nil {
+		return
+	}
+	for _, f := range files {
+		buf, e := os.ReadFile("fragments/" + f.Name())
+		err = e
+		if err != nil {
+			return
+		}
+		code := strings.TrimSpace(string(buf))
+		lines := strings.Split(code, "\n")
+		name := strings.TrimSpace(strings.ReplaceAll(lines[0], "/", ""))
+		m[name] = code
+	}
+	return
 }
