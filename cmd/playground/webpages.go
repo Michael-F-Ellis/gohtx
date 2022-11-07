@@ -1,10 +1,34 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
+	"io/ioutil"
+	"log"
+	"net/http"
+	"os"
 
+	"github.com/Michael-F-Ellis/gohtx"
 	. "github.com/Michael-F-Ellis/gohtx" // dot import makes sense here
+	"github.com/bitfield/script"
 )
+
+// indexHndlr generates and returns the index page.
+func indexHndlr(w http.ResponseWriter, r *http.Request) {
+	var buf bytes.Buffer
+	// For this skeleton, we start a new session
+	// when the index page is loaded or reloaded.
+	err := gohtx.Render(indexPage(newSession()), &buf, 0)
+	if err != nil {
+		log.Printf("%v", err)
+		w.WriteHeader(http.StatusInternalServerError)
+	} else {
+		_, err = w.Write(buf.Bytes())
+		if err != nil {
+			log.Println(err)
+		}
+	}
+}
 
 // indexPage creates the index page as a gohtx HTMLTree. The created
 // page will contain key as an hx-val to be used as a session key.
@@ -21,21 +45,6 @@ func indexPage(key string) (page *HtmlTree) {
 			indexBody(key),
 		),
 	)
-	return
-}
-
-// labeledFormField wraps a label and control into a bulma form field.
-func labeledFormField(label string, control *HtmlTree) (field *HtmlTree) {
-	field = Div(`class="field"`,
-		Label(`class="label"`, label),
-		Div(`class="control"`, control))
-	return
-}
-
-// unlabeledFormField wraps a control into a bulma form field.
-func unlabeledFormField(control *HtmlTree) (field *HtmlTree) {
-	field = Div(`class="field"`,
-		Div(`class="control"`, control))
 	return
 }
 
@@ -97,17 +106,63 @@ func indexBody(key string) (body *HtmlTree) {
 	return
 }
 
-// updaterButton returns a div containing a button with the htmx attributes
-// needed to replace the content of the button's container. The button also
-// has HyperScript that toggles the text color of the page title on each click.
-func updaterButton() (div *HtmlTree) {
-	div = Div(`class="block"`,
-		Button(`class="button is-primary is-medium" 
-		hx-get="/update" hx-target="#target"
-		script="on click toggle .has-text-primary on .title"
-		`, "Click Me!"),
-	)
+// labeledFormField wraps a label and control into a bulma form field.
+func labeledFormField(label string, control *HtmlTree) (field *HtmlTree) {
+	field = Div(`class="field"`,
+		Label(`class="label"`, label),
+		Div(`class="control"`, control))
 	return
+}
+
+// unlabeledFormField wraps a control into a bulma form field.
+func unlabeledFormField(control *HtmlTree) (field *HtmlTree) {
+	field = Div(`class="field"`,
+		Div(`class="control"`, control))
+	return
+}
+
+func mkSelect(optionNames []string, url, param, target string) (sel *HtmlTree) {
+	var options []interface{}
+	for _, name := range optionNames {
+		attrs := fmt.Sprintf(`value="%s"`, name)
+		options = append(options, Option(attrs, name))
+	}
+	attrs := fmt.Sprintf(`name="%s" hx-get="%s" hx-target="%s"`, param, url, target)
+	sel = Div(`class="select is-link"`,
+		Select(attrs, options...))
+	return
+}
+
+// updateHndlr responds to an update request. It verifies that
+// the request contains a valid session key before generating
+// and rendering the html.
+func updateHndlr(w http.ResponseWriter, r *http.Request) {
+	var buf bytes.Buffer
+	key := r.URL.Query().Get("key")
+	if key == "" {
+		log.Println("No key in request")
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	count, ok := Sessions[key]
+	if !ok {
+		log.Printf("Invalid key in request: %s", key)
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	count++
+	Sessions[key] = count
+
+	err := gohtx.Render(updateResponse(count), &buf, 0)
+	if err != nil {
+		log.Printf("%v", err)
+		w.WriteHeader(http.StatusInternalServerError)
+	} else {
+		_, err = w.Write(buf.Bytes())
+		if err != nil {
+			log.Println(err)
+		}
+	}
 }
 
 // updateResponse response returns an html fragment containing a
@@ -128,14 +183,134 @@ func updateResponse(updates uint64) (content *HtmlTree) {
 	return
 }
 
-func mkSelect(optionNames []string, url, param, target string) (sel *HtmlTree) {
-	var options []interface{}
-	for _, name := range optionNames {
-		attrs := fmt.Sprintf(`value="%s"`, name)
-		options = append(options, Option(attrs, name))
-	}
-	attrs := fmt.Sprintf(`name="%s" hx-get="%s" hx-target="%s"`, param, url, target)
-	sel = Div(`class="select is-link"`,
-		Select(attrs, options...))
+// updaterButton returns a div containing a button with the htmx attributes
+// needed to replace the content of the button's container. The button also
+// has HyperScript that toggles the text color of the page title on each click.
+func updaterButton() (div *HtmlTree) {
+	div = Div(`class="block"`,
+		Button(`class="button is-primary is-medium" 
+		hx-get="/update" hx-target="#target"
+		script="on click toggle .has-text-primary on .title"
+		`, "Click Me!"),
+	)
 	return
 }
+
+// inputHndlr gets the user's Go code from the input textarea and tries to evaluate
+// it. It uses the eval function which puts the result of the evaluation into the supplied
+// buffer.
+func inputHndlr(w http.ResponseWriter, r *http.Request) {
+	err := r.ParseForm()
+	if err != nil {
+		log.Printf("%v", err)
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	code := r.FormValue("code")
+	htm := eval(code, true)
+	_, _ = w.Write([]byte(htm))
+}
+
+// unwrappedInputHndlr gets the user's Go code from the input textarea and tries to evaluate
+// it. It uses the eval function which puts the result of the evaluation into the supplied
+// buffer.
+func unwrappedInputHndlr(w http.ResponseWriter, r *http.Request) {
+	err := r.ParseForm()
+	if err != nil {
+		log.Printf("%v", err)
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	code := r.FormValue("code")
+	htm := eval(code, false) // don't insert the user's code into the template.
+	_, _ = w.Write([]byte(htm))
+}
+
+// fragmentRequestHndlr returns the request code fragment
+func fragmentHndlr(w http.ResponseWriter, r *http.Request) {
+	which := r.URL.Query().Get("which")
+	log.Println(which)
+	code, ok := Fragments[which]
+	if !ok {
+		w.WriteHeader(http.StatusNotFound)
+		return
+	}
+	log.Println(code)
+	_, _ = w.Write([]byte(code))
+}
+
+// eval is called to evaluate Go code entered in the playground.
+func eval(input string, wrap bool) (htm string) {
+	// Insert user input into the template
+	var code string
+	if wrap {
+		code = fmt.Sprintf(wrapper, input)
+	} else {
+		code = input
+	}
+	// Get a temporary file to hold the code.
+	tmpfile, err := ioutil.TempFile("temp", "*.go")
+	if err != nil {
+		htm = fmt.Sprintf("<p>%v</p>", err)
+		return
+	}
+	defer os.Remove(tmpfile.Name())
+
+	// Write the code to the temporary file.
+	if _, err := tmpfile.Write([]byte(code)); err != nil {
+		htm = fmt.Sprintf("<p>%v</p>", err)
+		return
+	}
+	// Run the code
+	cmd := fmt.Sprintf("go run %s", tmpfile.Name())
+	htm, err = script.Exec(cmd).String()
+	if err != nil {
+		// Atempt to format the code but don't worry if formatting fails.
+		p := script.Exec("go fmt " + tmpfile.Name())
+		p.Wait()
+		// Return a listing of the run errors and the code.
+		htm = fmt.Sprintf(`
+		<div class="notification is-warning">
+		  <p>Evaluation failed:</p>
+		  <pre class="notification is-warning">%v</pre>
+		</div>
+		<hr><code><pre>%v</pre></code>`, htm, code)
+	}
+	return
+}
+
+// Wrapper contains a small main program text that wraps around code fragments
+// submitted for evaluation. The program is designed to be executed by 'go run'.
+// It attempts to render the code fragment and print it to stdout. If there is
+// an error, an html <p> containing the error message is printed instead.
+var wrapper = `
+// Wrapper for Gohtx Playground evaluation
+package main
+
+import (
+    "bytes"
+    "fmt"
+
+    . "github.com/Michael-F-Ellis/gohtx"
+)
+
+func main() {
+    var htx *HtmlTree
+	htx = P("",B("", "If you see this message, you forgot to assign a value to 'htx'."))
+
+    /***** You code inserted here. Must assign a *HtmlTree to htx. *****/
+    %s
+    /***** End of your code. *****/
+
+    var buf bytes.Buffer
+    err := Render(htx, &buf, 0)
+    if err != nil {
+    	buf.Reset()
+    	err = Render(P("", "render failed: "+err.Error()), &buf, 0)
+    	if err != nil {
+    	    // This should never happen ...
+    		panic(err)
+    	}
+    }
+    fmt.Println(buf.String())
+}`
