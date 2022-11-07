@@ -43,3 +43,22 @@ func TestGetFragments(t *testing.T) {
 		t.Errorf("Notification not found")
 	}
 }
+
+func TestMkSelect(t *testing.T) {
+	names := []string{"one", "two"}
+	s := mkSelect(names, "/url", "which", "#id")
+	exp := `<div class="select is-link">` +
+		`<select name="which" hx-get="/url" hx-target="#id">` +
+		`<option value="one">one</option>` +
+		`<option value="two">two</option>` +
+		`</select></div>`
+	var buf bytes.Buffer
+	err := gohtx.Render(s, &buf, -1)
+	if err != nil {
+		t.Errorf("%v", err)
+		return
+	}
+	if buf.String() != exp {
+		t.Errorf("\ngot %s \nexpected %s", buf.String(), exp)
+	}
+}

@@ -40,6 +40,13 @@ func Serve() {
 	// The input handlers
 	http.Handle("/input", http.HandlerFunc(inputHndlr))
 	http.Handle("/unwrapped", http.HandlerFunc(unwrappedInputHndlr))
+	// Fragment request handler
+	http.Handle("/fragment", http.HandlerFunc(fragmentHndlr))
+
+	// Serve the static files
+	http.Handle("/static/", http.FileServer(http.Dir("static")))
+
+	// Serve the static files
 
 	// Live installations for customers serve over HTTPS on port 443
 	// For testing we serve on localhost (default port 8080). The choice of
@@ -144,6 +151,19 @@ func unwrappedInputHndlr(w http.ResponseWriter, r *http.Request) {
 	code := r.FormValue("code")
 	htm := eval(code, false) // don't insert the user's code into the template.
 	_, _ = w.Write([]byte(htm))
+}
+
+// fragmentRequestHndlr returns the request code fragment
+func fragmentHndlr(w http.ResponseWriter, r *http.Request) {
+	which := r.URL.Query().Get("which")
+	log.Println(which)
+	code, ok := Fragments[which]
+	if !ok {
+		w.WriteHeader(http.StatusNotFound)
+		return
+	}
+	log.Println(code)
+	_, _ = w.Write([]byte(code))
 }
 
 // eval is called to evaluate Go code entered in the playground.

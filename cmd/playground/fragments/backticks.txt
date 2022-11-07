@@ -1,0 +1,4 @@
+// Backticks
+// Using back ticks (`) to quote attribute strings and content strings allows you to use 
+// single and double quotes within the strings.
+htx = Div(`class="notification is-link"`,  A(`href='https://htmx.org'`, `HTMX Web Pages`)) 
