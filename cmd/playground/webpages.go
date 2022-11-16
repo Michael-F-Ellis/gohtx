@@ -3,12 +3,10 @@ package main
 import (
 	"bytes"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
 
-	"github.com/Michael-F-Ellis/gohtx"
 	. "github.com/Michael-F-Ellis/gohtx" // dot import makes sense here
 	"github.com/bitfield/script"
 )
@@ -18,7 +16,7 @@ func indexHndlr(w http.ResponseWriter, r *http.Request) {
 	var buf bytes.Buffer
 	// For this skeleton, we start a new session
 	// when the index page is loaded or reloaded.
-	err := gohtx.Render(indexPage(newSession()), &buf, 0)
+	err := Render(indexPage(newSession()), &buf, 0)
 	if err != nil {
 		log.Printf("%v", err)
 		w.WriteHeader(http.StatusInternalServerError)
@@ -50,15 +48,15 @@ func indexPage(key string) (page *HtmlTree) {
 
 // indexBody returns the body element of the index.html page
 func indexBody(key string) (body *HtmlTree) {
-	defaultExample, ok := Fragments["Notification"]
-	if !ok {
-		// It's a programming error if notifications isn't available.
-		panic("defaultExample 'notification' not found in Fragments map.")
-	}
 	sectionAttrs := fmt.Sprintf(`class=section hx-vals='{"key": "%s"}'`, key)
 	var optionNames []string
 	for name := range Fragments {
 		optionNames = append(optionNames, name)
+	}
+	defaultExample, ok := Fragments["Notification"]
+	if !ok {
+		// It's a programming error if notifications isn't available.
+		panic("defaultExample 'notification' not found in Fragments map.")
 	}
 	body = Body(``,
 		Section(sectionAttrs,
@@ -67,34 +65,92 @@ func indexBody(key string) (body *HtmlTree) {
 			P(`class="subtitle is-info has-text-centered"`,
 				`with <b>HTMX</b>, <b>HyperScript</b> and <b>Bulma</b> CSS`),
 			// A dropdown select of example code fragments
-			mkSelect(
-				optionNames,
-				"/fragment",
-				"which",
-				"#gocode",
+			Div(`class=container`,
+				mkSelect(
+					optionNames,
+					"/fragment",
+					"which",
+					"#gocode",
+				)),
+			Div(`class=container id="forms-and-results"`,
+				formsAndResultsContent("", defaultExample, false, true, false),
 			),
-			// A form with textarea for code and a button to submit it.
-			Div(`id="pgsource" class="block"`,
-				Form(`class="form" hx-post="/input" hx-target="#pgtarget" hx-vals='{"lang":"go"}'`,
-					labeledFormField("Go Code", Textarea(`id="gocode" class=textarea name=gocode`, string(defaultExample))),
-					unlabeledFormField(Button(`class="button is-primary" type="submit"`, "Evaluate")),
-					// unlabeledFormField(Button(`class="button is-primary" hx-vals='js:{"lang":"html"}' type="submit"`, "Gohtify")),
-				),
-			),
-			Div(`id="pghtml" class="block"`,
-				Form(`class="form" hx-post="/input" hx-target="#gocode" hx-vals='{"lang":"html"}'`,
-					labeledFormField("HTML", Textarea(`id="htmlcode" class=textarea name=htmlcode`, string(`<p>Enter html here</p>`))),
-					unlabeledFormField(Button(`class="button is-primary" type="submit"`, "Gohtify")),
-				),
-			),
-
-			// where the server response goes
-			Div(`id="pgtarget" class="block"`),
 		),
 
 		// documentation links
 		resourceLinks(),
 	)
+	return
+}
+
+// formsAndResultsContent returns updated content for the forms-and-results
+// block.  Result is a string that contain either html code or Go code. Which
+// language is indicated by isHtml. The evaluation that created result may have
+// been unsuccessful, as indicated by isOk.  Successful html results are copied
+// into #pgtarget to be rendered by the browser and into #pghtml so the user can
+// see the generated code. Unsuccessful html results are just a thin wrapper
+// around error messages from the evaluation that created the html. We copy
+// those only into #pgtarget.
+// Go code results are produced by Ghotify from html entered by the user into
+// #pghtml.  These results also may be successfull or unsuccessful as indicated
+// by isOk.  Successful results are copied into #pgsource only. Unsuccessful
+// results go into #pgtarget only. The nullwrap flag determines whether generated
+// Go code will be wrapped with a null tag.
+func formsAndResultsContent(src, result string, isHtml, isOk bool, nullwrap bool) (content string) {
+	var (
+		pgSourceContent, pgHtmlContent, pgTargetContent string
+	)
+	switch isHtml {
+	case true:
+		pgSourceContent = src
+		pgTargetContent = result
+		if isOk {
+			pgHtmlContent = result
+		} else {
+			pgSourceContent = src
+		}
+	case false:
+		pgHtmlContent = src
+		if isOk {
+			if nullwrap {
+				pgSourceContent = "htx = " + result
+			} else {
+				pgSourceContent = result
+			}
+			pgTargetContent = ""
+		} else {
+			pgSourceContent = ""
+			pgTargetContent = result
+		}
+
+	}
+	htree := Null(
+		// Gohtx code
+		Div(`id="pgsource" class="block"`,
+			// A form with textarea for code and a button to submit it.
+			Form(`id="pgsrcform" class="form" hx-post="/input" hx-target="#forms-and-results" hx-vals='{"lang":"go"}'`,
+				labeledFormField("Go Code", Textarea(`id="gocode" class=textarea name=gocode`, pgSourceContent)),
+				unlabeledFormField(Button(`class="button is-primary" type="submit"`, "Evaluate")),
+			),
+		),
+		// where the server response goes
+		Div(`id="pgtarget" class="block"`, pgTargetContent),
+
+		// Html code
+		Div(`id="pghtml" class="block"`,
+			Form(`class="form" hx-post="/input" hx-target="#forms-and-results" hx-vals='{"lang":"html"}'`,
+				labeledFormField("HTML", Textarea(`id="htmlcode" class=textarea name=htmlcode`, pgHtmlContent)),
+				unlabeledFormField(Button(`class="button is-primary" type="submit"`, "Gohtify")),
+			),
+		),
+	)
+	var buf bytes.Buffer
+	err := Render(htree, &buf, 0)
+	if err != nil {
+		content = fmt.Sprintf("Unable to render formcontent: %v", err)
+	} else {
+		content = buf.String()
+	}
 	return
 }
 
@@ -144,8 +200,8 @@ func mkSelect(optionNames []string, url, param, target string) (sel *HtmlTree) {
 		options = append(options, Option(attrs, name))
 	}
 	attrs := fmt.Sprintf(`name="%s" hx-get="%s" hx-target="%s"`, param, url, target)
-	sel = Div(`class="select is-link"`,
-		Select(attrs, options...))
+	sel = labeledFormField("Examples", Div(`class="select is-link"`,
+		Select(attrs, options...)))
 	return
 }
 
@@ -169,7 +225,7 @@ func updateHndlr(w http.ResponseWriter, r *http.Request) {
 	count++
 	Sessions[key] = count
 
-	err := gohtx.Render(updateResponse(count), &buf, 0)
+	err := Render(updateResponse(count), &buf, 0)
 	if err != nil {
 		log.Printf("%v", err)
 		w.WriteHeader(http.StatusInternalServerError)
@@ -223,24 +279,26 @@ func inputHndlr(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	lang := r.FormValue("lang")
-	var result string
+	var (
+		result string
+	)
 	switch lang {
 	case "go":
+		// If the go cold evaluates successfully, we put the resulting hmtl into two places.
+		// One
 		code := r.FormValue("gocode")
-		result = eval(code, true)
+		evalResult, ok := eval(code, true)
+		result = formsAndResultsContent(code, evalResult, true, ok, false)
 	case "html":
 		code := r.FormValue("htmlcode")
-		// wrap the html code in a div to ensure Gohtify sees a single HtmlTree
-		wrapped := fmt.Sprintf(`<div id="wrapper-added-by-gohtify">%s</div>`, code)
 		ignore := map[string]struct{}{"html": {}, "head": {}, "body": {}}
-		err := Gohtify(wrapped, true, ignore, &result)
+		err := Gohtify(code, true, ignore, &result)
 		if err != nil {
 			log.Printf("%v", err)
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
-		// include an assignment to 'htx' (because it's annoying to omit it.)
-		result = "htx=" + result
+		result = formsAndResultsContent(code, result, false, true, true)
 	default:
 		log.Printf("unknown lang:'%v'", lang)
 		w.WriteHeader(http.StatusBadRequest)
@@ -261,7 +319,7 @@ func unwrappedInputHndlr(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	code := r.FormValue("code")
-	htm := eval(code, false) // don't insert the user's code into the template.
+	htm, _ := eval(code, false) // don't insert the user's code into the template.
 	_, _ = w.Write([]byte(htm))
 }
 
@@ -279,7 +337,7 @@ func fragmentHndlr(w http.ResponseWriter, r *http.Request) {
 }
 
 // eval is called to evaluate Go code entered in the playground.
-func eval(input string, wrap bool) (htm string) {
+func eval(input string, wrap bool) (htm string, ok bool) {
 	// Insert user input into the template
 	var code string
 	if wrap {
@@ -288,7 +346,7 @@ func eval(input string, wrap bool) (htm string) {
 		code = input
 	}
 	// Get a temporary file to hold the code.
-	tmpfile, err := ioutil.TempFile("temp", "*.go")
+	tmpfile, err := os.CreateTemp("temp", "*.go")
 	if err != nil {
 		htm = fmt.Sprintf("<p>%v</p>", err)
 		return
@@ -314,7 +372,10 @@ func eval(input string, wrap bool) (htm string) {
 		  <pre class="notification is-warning">%v</pre>
 		</div>
 		<hr><code><pre>%v</pre></code>`, htm, code)
+
+		return
 	}
+	ok = true
 	return
 }
 

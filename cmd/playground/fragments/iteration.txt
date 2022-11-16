@@ -1,0 +1,9 @@
+// Iteration
+// Generates a stack of divs with white text and backgrounds ranging from black to a very light grey.
+var content []interface{}
+content = append(content, Style(``, `div.myclass {color:#fff;} p {margin-left:2em;}`))
+for i := 0; i < 0xf0; i += 10 {
+	attrs := fmt.Sprintf(`class="myclass" style="background-color:#%0.2x%0.2x%0.2x;"`, i, i, i)
+	content = append(content, Div(attrs, P(``, fmt.Sprintf("i is %d", i))))
+}
+htx = Null(content...) // Null pseudotag wraps content to form a single HtmlTree

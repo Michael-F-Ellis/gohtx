@@ -13,45 +13,62 @@ func TestGohtify(t *testing.T) {
 		fmtexp string
 	}
 	tcases := []testcase{
-		// Comment
+		// Bare comment
 		{`<!--This is a comment-->`,
 			"Comment(`This is a comment`)",
 			"Comment(`This is a comment`)"},
+
+		// Comment child node
 		{`<div><!--This is a comment--></div>`,
 			"Div(``,Comment(`This is a comment`))",
 			"Div(``,\n\tComment(`This is a comment`))"},
+
 		// empty tag type
 		{`<br>`, "Br(``)",
 			"Br(``)"},
+
 		// empty tag surrounded by whitespace
 		{"\t<br>\n ", "Br(``)",
 			"Br(``)"},
+
 		// tag with attribute
 		{`<br id="foo">`, "Br(`id=\"foo\"`)",
 			"Br(`id=\"foo\"`)"},
+
 		//more than one attribute
 		{`<br id="foo" class="bar bare">`,
 			"Br(`id=\"foo\" class=\"bar bare\"`)",
 			"Br(`id=\"foo\" class=\"bar bare\"`)"},
+
 		// non-empty tag type
 		{`<div>hello</div>`, "Div(``,`hello`)",
-			"Div(``,\n\t`hello`)"},
+			"Div(``, `hello`)"},
+
 		// child elements including plain text
 		{`<div><p>hello</p>xyz</div>`,
 			"Div(``,P(``,`hello`),`xyz`)",
-			"Div(``,\n\tP(``,\n\t\t`hello`),\n\t`xyz`)"},
+			"Div(``,\n\tP(``, `hello`),\n\t`xyz`)"},
+
 		// child elements
 		{`<div><p>hello</p><p>bye</p></div>`,
 			"Div(``,P(``,`hello`),P(``,`bye`))",
-			"Div(``,\n\tP(``,\n\t\t`hello`),\n\tP(``,\n\t\t`bye`))"},
+			"Div(``,\n\tP(``, `hello`),\n\tP(``, `bye`))"},
+
 		// whitespace before child tag
-		{"<div>\n<p>hello</p></div>",
-			"Div(``,P(``,`hello`))",
-			"Div(``,\n\tP(``,\n\t\t`hello`))"},
+		{"<div>\n<p>hola</p></div>",
+			"Div(``,P(``,`hola`))",
+			"Div(``,\n\tP(``, `hola`))"},
+
 		// child element with attribute
 		{`<div><p class="bar">hello</p></div>`,
 			"Div(``,P(`class=\"bar\"`,`hello`))",
-			"Div(``,\n\tP(`class=\"bar\"`,\n\t\t`hello`))"},
+			"Div(``,\n\tP(`class=\"bar\"`, `hello`))"},
+
+		// Two nodes with no outer element
+		{`<div>hi</div><div>bye</div>`,
+			"Null(Div(``,`hi`),Div(``,`bye`))",
+			"Null(\n\tDiv(``, `hi`),\n\tDiv(``, `bye`))",
+		},
 	}
 	ignore := map[string]struct{}{"html": {}, "head": {}, "body": {}}
 	for _, tc := range tcases {
@@ -74,7 +91,7 @@ func TestGohtify(t *testing.T) {
 			continue
 		}
 		if diff := deep.Equal(got, tc.fmtexp); diff != nil {
-			t.Errorf("%v", diff)
+			t.Errorf("\n%v", diff)
 			continue
 		}
 	}

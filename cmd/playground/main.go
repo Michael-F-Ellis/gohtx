@@ -53,6 +53,8 @@ func getFragments() (m map[string]string, err error) {
 		if err != nil {
 			return
 		}
+		// Trim the first line and use the trimmed string as the key for the
+		// map entry.
 		code := strings.TrimSpace(string(buf))
 		lines := strings.Split(code, "\n")
 		name := strings.TrimSpace(strings.ReplaceAll(lines[0], "/", ""))
