@@ -39,6 +39,21 @@ func indexPage(key string) (page *HtmlTree) {
 			Head(``,
 				CustomHeadContent(true, true, true),
 				Title(``, `Gohtx Playground`),
+				// Set textarea heights to automatically resize on input.
+				Script(`type=text/javascript`, `
+		function AutomateTextareaYScroll() {
+		var tx = document.getElementsByTagName("textarea");
+        for (let i = 0; i < tx.length; i++) {
+        tx[i].setAttribute("style", "height:" + (tx[i].scrollHeight) + "px;overflow-y:hidden;");	
+		tx[i].addEventListener("input", OnInput, false);
+        }}
+
+        function OnInput() {
+        this.style.height = 0;
+        this.style.height = (this.scrollHeight) + "px";
+        }
+		htmx.onLoad(function(elt) {AutomateTextareaYScroll();});
+		`),
 			),
 			indexBody(key),
 		),
@@ -55,7 +70,7 @@ func indexBody(key string) (body *HtmlTree) {
 	}
 	defaultExample, ok := Fragments["Notification"]
 	if !ok {
-		// It's a programming error if notifications isn't available.
+		// It's a programming error if the fragment named 'notification' isn't available.
 		panic("defaultExample 'notification' not found in Fragments map.")
 	}
 	body = Body(``,

@@ -47,11 +47,13 @@ func TestGetFragments(t *testing.T) {
 func TestMkSelect(t *testing.T) {
 	names := []string{"one", "two"}
 	s := mkSelect(names, "/url", "which", "#id")
-	exp := `<div class="select is-link">` +
+	exp := `<div class="field">` + `<label class="label">Examples</label>` +
+		`<div class="control">` +
+		`<div class="select is-link">` +
 		`<select name="which" hx-get="/url" hx-target="#id">` +
 		`<option value="one">one</option>` +
 		`<option value="two">two</option>` +
-		`</select></div>`
+		`</select></div></div></div>`
 	var buf bytes.Buffer
 	err := gohtx.Render(s, &buf, -1)
 	if err != nil {
